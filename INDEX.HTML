@@ -559,6 +559,73 @@
             box-shadow: 0 8px 40px rgba(0, 212, 255, 0.6);
         }
 
+        /* Error modal */
+        .error-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 14, 39, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .error-modal.active {
+            display: flex;
+        }
+
+        .error-content {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 20px;
+            padding: clamp(30px, 5vw, 50px);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .error-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--color-danger);
+            margin-bottom: 12px;
+        }
+
+        .error-message {
+            color: var(--color-text-muted);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .btn-error-close {
+            width: 100%;
+            padding: 12px 24px;
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.5);
+            border-radius: 12px;
+            color: var(--color-danger);
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-error-close:hover {
+            background: rgba(255, 107, 107, 0.3);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -778,6 +845,15 @@
         </div>
     </div>
 
+    <!-- Modal de error -->
+    <div class="error-modal" id="errorModal">
+        <div class="error-content">
+            <h2 class="error-title">⚠️ Error en el envío</h2>
+            <p class="error-message" id="errorMessage">Hubo un problema al registrar tu información. Por favor intenta de nuevo.</p>
+            <button class="btn-error-close" id="btnErrorClose">Intentar de nuevo</button>
+        </div>
+    </div>
+
     <script>
         const form = document.querySelectorAll('.step');
         const totalSteps = form.length;
@@ -791,7 +867,9 @@
         const totalStepsSpan = document.getElementById('totalSteps');
         const progressFill = document.querySelector('.progress-fill');
         const successModal = document.getElementById('successModal');
+        const errorModal = document.getElementById('errorModal');
         const btnCloseModal = document.getElementById('btnCloseModal');
+        const btnErrorClose = document.getElementById('btnErrorClose');
 
         // Inputs de cada paso
         const inputs = {
@@ -829,23 +907,18 @@
             currentStepSpan.textContent = stepIndex + 1;
             updateProgress();
 
-            // Mostrar/ocultar botón atrás
             if (stepIndex === 0) {
                 btnBack.style.display = 'none';
             } else {
                 btnBack.style.display = 'block';
             }
 
-            // Cambiar texto del botón siguiente
             if (stepIndex === totalSteps - 1) {
-btnNext.textContent = 'Enviar';
-} else {
-btnNext.textContent = 'Siguiente →';
-}
-
+                btnNext.textContent = 'Enviar';
+            } else {
+                btnNext.textContent = 'Siguiente →';
             }
 
-            // Focus en el input
             inputs[stepIndex].focus();
         }
 
@@ -889,6 +962,8 @@ btnNext.textContent = 'Siguiente →';
                 if (currentStep < totalSteps - 1) {
                     currentStep++;
                     showStep(currentStep);
+                } else {
+                    submitForm();
                 }
             }
         });
@@ -901,126 +976,78 @@ btnNext.textContent = 'Siguiente →';
             }
         });
 
-      // Enviar formulario
-document.addEventListener('click', async (e) => {
+        // Enviar formulario
+        async function submitForm() {
+            if (!validateCurrentStep()) return;
 
-```
-if (currentStep !== totalSteps - 1) return;
+            // Recopilar todos los datos
+            formData.nombre = inputs[0].value.trim();
+            formData.cargo = inputs[1].value.trim();
+            formData.empresa = inputs[2].value.trim();
+            formData.sector = inputs[3].value.trim();
+            formData.direccion = inputs[4].value.trim();
+            formData.telefono = inputs[5].value.trim();
+            formData.correo = inputs[6].value.trim();
+            formData.reto = inputs[7].value.trim();
+            formData.timestamp = new Date().toISOString();
 
-if (
-    e.target.classList.contains('btn-next') ||
-    e.target.id === 'btnSubmit'
-) {
+            btnNext.disabled = true;
+            btnNext.textContent = 'Enviando...';
 
-    if (!validateCurrentStep()) return;
+            try {
+                const response = await fetch(
+                    'https://script.google.com/macros/s/AKfycbxm8roSHe2UbDNc3Orf2JXmCNp-5qoos1R18xlv31cDr-t2oC_h8oS-63GOgk7cC_Gf/exec',
+                    {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    }
+                );
 
-    formData.nombre = inputs[0].value.trim();
-    formData.cargo = inputs[1].value.trim();
-    formData.empresa = inputs[2].value.trim();
-    formData.sector = inputs[3].value.trim();
-    formData.direccion = inputs[4].value.trim();
-    formData.telefono = inputs[5].value.trim();
-    formData.correo = inputs[6].value.trim();
-    formData.reto = inputs[7].value.trim();
-    formData.timestamp = new Date().toISOString();
+                console.log('Respuesta:', response);
 
-    btnNext.disabled = true;
-    btnNext.textContent = 'Enviando...';
+                // Mostrar modal de éxito
+                setTimeout(() => {
+                    successModal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                    btnNext.disabled = false;
+                    btnNext.textContent = 'Enviar';
+                }, 500);
 
-    try {
-
-        const response = await fetch(
-            'https://script.google.com/macros/s/AKfycbxm8roSHe2UbDNc3Orf2JXmCNp-5qoos1R18xlv31cDr-t2oC_h8oS-63GOgk7cC_Gf/exec',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
+            } catch (error) {
+                console.error('Error:', error);
+                
+                document.getElementById('errorMessage').textContent = 'Hubo un problema al conectar con el servidor. Por favor intenta de nuevo.';
+                errorModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                
+                btnNext.disabled = false;
+                btnNext.textContent = 'Enviar';
             }
-        );
-
-        const result = await response.json();
-
-        console.log('Respuesta Apps Script:', result);
-
-        if (result.success) {
-
-            successModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-
-        } else {
-
-            console.error(result);
-
-            alert('No fue posible registrar la información.');
-
-            btnNext.disabled = false;
-            btnNext.textContent = 'Enviar';
-
         }
 
-    } catch (error) {
-
-        console.error('Error:', error);
-
-        alert(
-            'Error de conexión con el servidor. Revisa la consola (F12).'
-        );
-
-        btnNext.disabled = false;
-        btnNext.textContent = 'Enviar';
-
-    }
-
-}
-```
-
-});
-
-
-                    try {
-                        // Aquí va la integración con Google Apps Script
-                        // const response = await fetch('https://script.google.com/macros/s/[DEPLOYMENT_ID]/usercopy', {
-                        //     method: 'POST',
-                        //     body: JSON.stringify(formData)
-                        // });
-
-                        // Simulación de envío
-                        const response = await fetch(
-'https://script.google.com/macros/s/AKfycbxm8roSHe2UbDNc3Orf2JXmCNp-5qoos1R18xlv31cDr-t2oC_h8oS-63GOgk7cC_Gf/exec',
-{
-method: 'POST',
-headers: {
-'Content-Type': 'application/json'
-},
-body: JSON.stringify(formData)
-});
-
-const result = await response.json();
-
-console.log(result);
-
-                    }
-                }
-            }
-        });
-
-        // Cerrar modal
+        // Cerrar modal de éxito
         btnCloseModal.addEventListener('click', () => {
             successModal.classList.remove('active');
             document.body.style.overflow = 'auto';
             
-            // Reiniciar formulario
             currentStep = 0;
             Object.values(inputs).forEach(input => {
                 input.value = '';
                 input.classList.remove('success', 'error');
             });
             showStep(0);
-            btnNext.disabled = false;
             btnNext.textContent = 'Siguiente →';
             Object.keys(formData).forEach(key => delete formData[key]);
+        });
+
+        // Cerrar modal de error
+        btnErrorClose.addEventListener('click', () => {
+            errorModal.classList.remove('active');
+            document.body.style.overflow = 'auto';
         });
 
         // Enter para siguiente
